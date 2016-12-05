@@ -40,18 +40,6 @@ BITS_InitializeWorld(BitsGame_t* Game_p,
     Game_p->CurrentWorld_p = malloc(NumberOfUints * sizeof(uint_t));
     Game_p->EvolvingWorld_p = malloc(NumberOfUints * sizeof(uint_t));
     memset(Game_p->CurrentWorld_p, 0, NumberOfUints * sizeof(uint_t));
-
-    // Set a Glider pattern, ugly way...
-    memset(Game_p->EvolvingWorld_p, 0, NumberOfUints * sizeof(uint_t));
-    BITS_SetCellState(Game_p, 1, 2, 1);
-    BITS_SetCellState(Game_p, 3, 1, 1);
-    BITS_SetCellState(Game_p, 3, 2, 1);
-    BITS_SetCellState(Game_p, 3, 3, 1);
-    BITS_SetCellState(Game_p, 2, 3, 1);
-    uint_t* Temp_p = Game_p->EvolvingWorld_p;
-    Game_p->EvolvingWorld_p = Game_p->CurrentWorld_p;
-    Game_p->CurrentWorld_p = Temp_p;
-
 //    for (int i = 0; i <= 32; i++)
 //    {
 //        int n;
@@ -91,6 +79,30 @@ bit = (number >> x) & 1;
      */
 
     Target_p = Game_p->EvolvingWorld_p + Game_p->NumberOfUintsPerRow * (1 + Row) + UintPos;
+    if (State)
+    {
+        // Set Bit
+        *Target_p |= 1<<(32 - BitPos - 1);
+    }
+    else
+    {
+        // Clear Bit
+        *Target_p &= ~(1<<(32 - BitPos - 1));
+    }
+}
+
+
+void
+BITS_SetCellStateInCurrent(BitsGame_t* Game_p,
+                           const int   Column,
+                           const int   Row,
+                           const int   State)
+{
+    uint_t* Target_p;
+    int UintPos = (1 + Column) / (sizeof(uint_t) * 8);
+    int BitPos  = (1 + Column) % (sizeof(uint_t) * 8);
+
+    Target_p = Game_p->CurrentWorld_p + Game_p->NumberOfUintsPerRow * (1 + Row) + UintPos;
     if (State)
     {
         // Set Bit

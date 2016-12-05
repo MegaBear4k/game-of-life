@@ -37,6 +37,13 @@ BITS_SetCellState(BitsGame_t* Game_p,
                   const int   State);
 
 
+void
+BITS_SetCellStateInCurrent(BitsGame_t* Game_p,
+                           const int   Column,
+                           const int   Row,
+                           const int   State);
+
+
 int
 BITS_GetCellState(BitsGame_t* Game_p,
                   const int   Column,

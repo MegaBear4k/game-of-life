@@ -4,6 +4,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <errno.h>
 
 #include "gol_api.h"
 #include "gol_ref.h"
@@ -31,11 +33,15 @@ typedef struct
 static int
 GetCellState(const GOL_Game_t Game, const int Column, const int Row);
 
+static void
+SetCellStateInCurrent(const GOL_Game_t Game, const int Column, const int Row, const int State);
+
 
 GOL_Game_t
 GOL_InitializeWorld(const GOL_Variant_t Variant,
                     const int           Width,
-                    const int           Height)
+                    const int           Height,
+                    const int           UseDefaultPattern)
 {
     GameOfLife_t* Game_p = NULL;
     char* VariantName_p = NULL;
@@ -70,6 +76,16 @@ GOL_InitializeWorld(const GOL_Variant_t Variant,
     if (Game_p != NULL)
     {
         printf("Initialized **%s** world\n", VariantName_p);
+
+        if (UseDefaultPattern)
+        {
+            // Insert the Pattern "Glider"
+            SetCellStateInCurrent(Game_p, 1, 2, ALIVE);
+            SetCellStateInCurrent(Game_p, 3, 1, ALIVE);
+            SetCellStateInCurrent(Game_p, 3, 2, ALIVE);
+            SetCellStateInCurrent(Game_p, 3, 3, ALIVE);
+            SetCellStateInCurrent(Game_p, 2, 3, ALIVE);
+        }
     }
 
     return Game_p;
@@ -82,7 +98,35 @@ GOL_InitializeWorldFromFile(const GOL_Variant_t Variant,
                             const int           Height,
                             const char* const   Filename_p)
 {
+    GameOfLife_t* Game_p = NULL;
 
+    Game_p = GOL_InitializeWorld(Variant, Width, Height, 0);
+    if (Game_p != NULL)
+    {
+        FILE * pfile;
+        int i = 0, j = 0, len;
+        char strread[256];
+
+        if ((pfile = fopen(Filename_p, "r")) == NULL) {
+                fprintf(stderr,"Error: unable to read \"%s\" (error #%d).\n",
+                        Filename_p, errno);
+                abort();
+        }
+
+        while (j < Height && !feof(pfile) &&
+                        fgets(strread, 256, pfile) != NULL) {
+                /* jth line read */
+                len = strlen(strread);
+                if (len > Width)
+                        len = Width; /* ignore extra chars */
+                for (i = 0; i < len; i++)
+                    SetCellStateInCurrent(Game_p, i, j, strread[i] == CHAR_ALIVE ? ALIVE : DEAD);
+                j++; /* next line */
+        }
+        fclose(pfile);
+
+    }
+    return Game_p;
 }
 
 
@@ -156,16 +200,11 @@ GOL_CompareWorlds(const GOL_Game_t Game1, const GOL_Game_t Game2)
     MaxWidth = (Game1_Width > Game2_Width) ? Game1_Width : Game2_Width;
     MaxHeight = (Game1_Height > Game2_Height) ? Game1_Height : Game2_Height;
 
-//    printf("GAME1\n");
-//    GOL_OutputWorld(Game1);
-//    printf("GAME2\n");
-//    GOL_OutputWorld(Game2);
-
     for (int x = 0; x < MaxWidth; x++)
     {
         for (int y = 0; y < MaxHeight; y++)
         {
-            if (GOL_GetCellState(Game1, x, y) != GOL_GetCellState(Game2, x, y))
+            if (GetCellState(Game1, x, y) != GetCellState(Game2, x, y))
             {
                 printf("ERROR! Worlds are not equal! X=%d Y= %d\n", x, y);
                 printf("GAME1\n");
@@ -239,6 +278,51 @@ GOL_OutputWorld(const GOL_Game_t Game)
 void
 GOL_SaveWorldToFile(const GOL_Game_t Game, const char* const Filename_p)
 {
+    GameOfLife_t* Game_p = (GameOfLife_t*)Game;
+    int Width;
+    int Height;
+
+    switch (Game_p->Variant)
+    {
+    case GOL_VARIANT_REFERENCE:
+        Width = get_world_width();
+        Height = get_world_height();
+        break;
+
+    case GOL_VARIANT_ARRAY:
+        Width  = Game_p->Data.ArrayGame.Width;
+        Height = Game_p->Data.ArrayGame.Height;
+        break;
+
+    case GOL_VARIANT_BITS:
+        Width  = Game_p->Data.BitsGame.Width;
+        Height = Game_p->Data.BitsGame.Height;
+        break;
+
+    default:
+        printf("Invalid implementation variant: %d\n", Game_p->Variant);
+        return;
+    }
+
+    FILE * pfile;
+    int i, j;
+    char* strwrite = malloc(Width + 1);
+
+    if ((pfile = fopen(Filename_p, "w")) == NULL) {
+        fprintf(stderr,"Error: unable to open \"%s\" for writing (error #%d).\n",
+                Filename_p, errno);
+        abort();
+    }
+
+    strwrite[Width] = '\0'; /* null terminator */
+    for (j = 0; j < Height; j++) {
+        for (i = 0; i < Width; i++)
+            strwrite[i] = GetCellState(Game, i, j) == ALIVE ? CHAR_ALIVE : CHAR_DEAD;
+        fprintf(pfile,"%s\n",strwrite);
+    }
+
+    free(strwrite);
+    fclose(pfile);
 
 }
 
@@ -262,8 +346,37 @@ GetCellState(const GOL_Game_t Game, const int Column, const int Row)
     case GOL_VARIANT_BITS:
         State = BITS_GetCellState(&Game_p->Data.BitsGame, Column, Row);
         break;
+
+    default:
+        break;
     }
     return State;
+}
+
+
+// Sets a cell state in the current world. Used for loading files only.
+static void
+SetCellStateInCurrent(const GOL_Game_t Game, const int Column, const int Row, const int State)
+{
+    GameOfLife_t* Game_p = (GameOfLife_t*)Game;
+
+    switch (Game_p->Variant)
+    {
+    case GOL_VARIANT_REFERENCE:
+        set_cell_state_in_current(&Game_p->Data.RefGame, Column, Row, State);
+        break;
+
+    case GOL_VARIANT_ARRAY:
+        ARRAY_SetCellStateInCurrent(&Game_p->Data.ArrayGame, Column, Row, State);
+        break;
+
+    case GOL_VARIANT_BITS:
+        BITS_SetCellStateInCurrent(&Game_p->Data.BitsGame, Column, Row, State);
+        break;
+
+    default:
+        break;
+    }
 }
 
 
@@ -318,30 +431,4 @@ GOL_GetWorldHeight(const GOL_Game_t Game)
         break;
     }
     return Height;
-}
-
-
-int
-GOL_GetCellState(const GOL_Game_t Game, const int x, const int y)
-{
-    GameOfLife_t* Game_p = (GameOfLife_t*)Game;
-    int State = CELL_DEAD;
-    switch (Game_p->Variant)
-    {
-    case GOL_VARIANT_REFERENCE:
-        State = get_cell_state(&Game_p->Data.RefGame, x, y);
-        break;
-
-    case GOL_VARIANT_ARRAY:
-        State = ARRAY_GetCellState(&Game_p->Data.ArrayGame, x, y);
-        break;
-
-    case GOL_VARIANT_BITS:
-        State = BITS_GetCellState(&Game_p->Data.BitsGame, x, y);
-        break;
-
-    default:
-        break;
-    }
-    return State;
 }

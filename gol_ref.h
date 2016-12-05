@@ -48,6 +48,10 @@ int get_cell_state(RefGame_t* Game_p, int x, int y);
    are specified */
 void set_cell_state(RefGame_t* Game_p, int x, int y, int state);
 
+/* As above, but sets the value in the current world, not the evolving. */
+void set_cell_state_in_current(RefGame_t* Game_p, int x, int y, int state);
+
+
 /* updates world state to next generation and resets all
    next generation states to DEAD */
 void finalize_evolution(RefGame_t* Game_p);

@@ -36,6 +36,13 @@ ARRAY_SetCellState(ArrayGame_t* Game_p,
                    const int    State);
 
 
+void
+ARRAY_SetCellStateInCurrent(ArrayGame_t* Game_p,
+                            const int    Column,
+                            const int    Row,
+                            const int    State);
+
+
 int
 ARRAY_GetCellState(ArrayGame_t* Game_p,
                    const int    Column,

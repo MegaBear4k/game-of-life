@@ -131,12 +131,6 @@ void initialize_world(RefGame_t* Game_p) {
     for (i = 0; i < WORLDWIDTH; i++)
         for (j = 0; j < WORLDHEIGHT; j++)
             Game_p->world[i][j] = Game_p->nextstates[i][j] = DEAD;
-    /* pattern "glider" */
-    Game_p->world[1][2] = ALIVE;
-    Game_p->world[3][1] = ALIVE;
-    Game_p->world[3][2] = ALIVE;
-    Game_p->world[3][3] = ALIVE;
-    Game_p->world[2][3] = ALIVE;
 }
 
 int get_world_width(void) {
@@ -161,6 +155,18 @@ void set_cell_state(RefGame_t* Game_p, int x, int y, int state) {
     }
     Game_p->nextstates[x][y] = state;
 }
+
+
+void set_cell_state_in_current(RefGame_t* Game_p, int x, int y, int state)
+{
+    if (x < 0 || x >= WORLDWIDTH || y < 0 || y >= WORLDHEIGHT) {
+        fprintf(stderr,"Error: coordinates (%d,%d) are invalid.\n",
+                x, y);
+        abort();
+    }
+    Game_p->world[x][y] = state;
+}
+
 
 void finalize_evolution(RefGame_t* Game_p) {
     int x, y;

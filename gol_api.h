@@ -29,7 +29,8 @@ typedef void* GOL_Game_t;
 GOL_Game_t
 GOL_InitializeWorld(const GOL_Variant_t Variant,
                     const int           Width,
-                    const int           Height);
+                    const int           Height,
+                    const int           UseDefaultPattern);
 
 
 GOL_Game_t
@@ -66,7 +67,3 @@ GOL_GetWorldWidth(const GOL_Game_t Game);
 
 int
 GOL_GetWorldHeight(const GOL_Game_t Game);
-
-
-int
-GOL_GetCellState(const GOL_Game_t Game, const int x, const int y);

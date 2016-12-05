@@ -20,8 +20,6 @@ typedef enum
 } GOL_Display_t;
 
 
-
-
 int
 main(int argc, char* argv[])
 {
@@ -112,6 +110,9 @@ main(int argc, char* argv[])
                                                   Width,
                                                   Height,
                                                   Filename_p);
+//                        GOL_OutputWorld(TheGame);
+//                        exit(0);
+
             if (DoCompare)
             {
                 RefGame = GOL_InitializeWorldFromFile(GOL_VARIANT_REFERENCE,
@@ -122,11 +123,11 @@ main(int argc, char* argv[])
         }
         else
         {
-            TheGame = GOL_InitializeWorld(Variant, Width, Height);
+            TheGame = GOL_InitializeWorld(Variant, Width, Height, 1);
             if (DoCompare)
             {
                 RefGame = GOL_InitializeWorld(GOL_VARIANT_REFERENCE,
-                                              Width, Height);
+                                              Width, Height, 1);
             }
         }
 

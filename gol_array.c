@@ -32,12 +32,6 @@ ARRAY_InitializeWorld(ArrayGame_t* Game_p,
     Game_p->Height = Height;
 
     memset(Game_p->CurrentWorld_p, 0, NumberOfBytes);
-    /* pattern "glider" */
-    *(Game_p->CurrentWorld_p + POS_OFFSET(1, 2, Width)) = 1;
-    *(Game_p->CurrentWorld_p + POS_OFFSET(3, 1, Width)) = 1;
-    *(Game_p->CurrentWorld_p + POS_OFFSET(3, 2, Width)) = 1;
-    *(Game_p->CurrentWorld_p + POS_OFFSET(3, 3, Width)) = 1;
-    *(Game_p->CurrentWorld_p + POS_OFFSET(2, 3, Width)) = 1;
 }
 
 
@@ -57,6 +51,17 @@ ARRAY_SetCellState(ArrayGame_t* Game_p,
 {
     int Pos = (1 + Row) * (Game_p->Width + 2) + (1 + Column);
     *(Game_p->EvolvingWorld_p + Pos) = State;
+}
+
+
+void
+ARRAY_SetCellStateInCurrent(ArrayGame_t* Game_p,
+                            const int    Column,
+                            const int    Row,
+                            const int    State)
+{
+    int Pos = (1 + Row) * (Game_p->Width + 2) + (1 + Column);
+    *(Game_p->CurrentWorld_p + Pos) = State;
 }
 
 
