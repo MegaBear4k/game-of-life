@@ -8,6 +8,7 @@
 #include "gol_api.h"
 #include "gol_ref.h"
 #include "gol_array.h"
+#include "gol_bits.h"
 
 
 /* character representations of cell states */
@@ -22,6 +23,7 @@ typedef struct
     {
         RefGame_t   RefGame;
         ArrayGame_t ArrayGame;
+        BitsGame_t  BitsGame;
     } Data;
 } GameOfLife_t;
 
@@ -56,6 +58,9 @@ GOL_InitializeWorld(const GOL_Variant_t Variant,
 
     case GOL_VARIANT_BITS:
         Game_p = malloc(sizeof(GameOfLife_t));
+        Game_p->Variant = GOL_VARIANT_BITS;
+        BITS_InitializeWorld(&Game_p->Data.BitsGame, Width, Height);
+        VariantName_p = "BITS";
         break;
 
     default:
@@ -96,6 +101,7 @@ GOL_DestroyWorld(GOL_Game_t* Game_p)
         break;
 
     case GOL_VARIANT_BITS:
+        BITS_DestroyWorld(&(*Game_pp)->Data.BitsGame);
         break;
 
     default:
@@ -122,6 +128,7 @@ GOL_EvolveWorld(const GOL_Game_t Game)
         break;
 
     case GOL_VARIANT_BITS:
+        BITS_EvolveWorld(&Game_p->Data.BitsGame);
         break;
 
     default:
@@ -192,6 +199,10 @@ GOL_OutputWorld(const GOL_Game_t Game)
         break;
 
     case GOL_VARIANT_BITS:
+        Width  = Game_p->Data.BitsGame.Width;
+        Height = Game_p->Data.BitsGame.Height;
+        break;
+
     default:
         printf("Invalid implementation variant: %d\n", Game_p->Variant);
         return;
@@ -249,11 +260,11 @@ GetCellState(const GOL_Game_t Game, const int Column, const int Row)
         break;
 
     case GOL_VARIANT_BITS:
+        State = BITS_GetCellState(&Game_p->Data.BitsGame, Column, Row);
         break;
     }
     return State;
 }
-
 
 
 // XXX: Expose in the API (or not?)
@@ -273,6 +284,10 @@ GOL_GetWorldWidth(const GOL_Game_t Game)
         break;
 
     case GOL_VARIANT_BITS:
+        Width = BITS_GetWorldWidth(&Game_p->Data.BitsGame);
+        break;
+
+    default:
         break;
     }
     return Width;
@@ -284,7 +299,7 @@ int
 GOL_GetWorldHeight(const GOL_Game_t Game)
 {
     GameOfLife_t* Game_p = (GameOfLife_t*)Game;
-    int Height;
+    int Height = 0;
     switch (Game_p->Variant)
     {
     case GOL_VARIANT_REFERENCE:
@@ -296,6 +311,10 @@ GOL_GetWorldHeight(const GOL_Game_t Game)
         break;
 
     case GOL_VARIANT_BITS:
+        Height = BITS_GetWorldHeight(&Game_p->Data.BitsGame);
+        break;
+
+    default:
         break;
     }
     return Height;
@@ -306,7 +325,7 @@ int
 GOL_GetCellState(const GOL_Game_t Game, const int x, const int y)
 {
     GameOfLife_t* Game_p = (GameOfLife_t*)Game;
-    int State;
+    int State = CELL_DEAD;
     switch (Game_p->Variant)
     {
     case GOL_VARIANT_REFERENCE:
@@ -318,9 +337,11 @@ GOL_GetCellState(const GOL_Game_t Game, const int x, const int y)
         break;
 
     case GOL_VARIANT_BITS:
-        State = CELL_DEAD;
+        State = BITS_GetCellState(&Game_p->Data.BitsGame, x, y);
+        break;
+
+    default:
         break;
     }
     return State;
 }
-

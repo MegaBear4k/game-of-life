@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "gol_api.h"
 
@@ -96,6 +97,8 @@ main(int argc, char* argv[])
     {
         GOL_Game_t TheGame;
         GOL_Game_t RefGame;
+        clock_t StartTime;
+        clock_t EndTime;
 
         printf("Game of Life!\n\n"
                "Params... Width=%d Height=%d NumGenerations=%d "
@@ -132,6 +135,7 @@ main(int argc, char* argv[])
             return -1;
         }
 
+        StartTime = clock();
         for (int i = 0; i < NumGenerations; i++)
         {
             GOL_EvolveWorld(TheGame);
@@ -151,6 +155,7 @@ main(int argc, char* argv[])
                 GOL_CompareWorlds(TheGame, RefGame);
             }
         }
+        EndTime = clock();
 
         if (Display == GOL_DISPLAY_SHOW_FINAL)
         {
@@ -167,7 +172,9 @@ main(int argc, char* argv[])
         {
             GOL_DestroyWorld(&RefGame);
         }
-        printf("Done!\n");
+        printf("Done! Made %d evolutions in %f seconds\n",
+               NumGenerations,
+               (((double)(EndTime - StartTime)) / CLOCKS_PER_SEC));
     }
     else
     {

@@ -15,8 +15,6 @@
 //int Pos = (1 + Row) * (Game_p->Width + 2) + (1 + Column);
 
 
-
-
 static int
 CalculateNewCellState(ArrayGame_t* Game_p,
                       const int    Column,
@@ -75,7 +73,6 @@ ARRAY_GetCellState(ArrayGame_t* Game_p,
 void
 ARRAY_EvolveWorld(ArrayGame_t* Game_p)
 {
-
     for (int Column = 0; Column < Game_p->Width; Column++)
     {
         for (int Row = 0; Row < Game_p->Height; Row++)
