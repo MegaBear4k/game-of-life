@@ -8,6 +8,7 @@
 
 #include "gol_bits.h"
 
+//#define ENABLE_VERBOSE_LOGGING
 
 #define CALC_BITS_PER_3(X)   ((0x0E994 >> ((X) << 1)) & 0x03)
 
@@ -40,12 +41,6 @@ BITS_InitializeWorld(BitsGame_t* Game_p,
     Game_p->CurrentWorld_p = malloc(NumberOfUints * sizeof(uint_t));
     Game_p->EvolvingWorld_p = malloc(NumberOfUints * sizeof(uint_t));
     memset(Game_p->CurrentWorld_p, 0, NumberOfUints * sizeof(uint_t));
-//    for (int i = 0; i <= 32; i++)
-//    {
-//        int n;
-//        n = 1<<i;
-//        printf("%2d => 0x%04x\n", i, n);
-//    }
 }
 
 
@@ -66,8 +61,6 @@ BITS_SetCellState(BitsGame_t* Game_p,
     uint_t* Target_p;
     int UintPos = (1 + Column) / (sizeof(uint_t) * 8);
     int BitPos  = (1 + Column) % (sizeof(uint_t) * 8);
-//    uint_t NewValue = (State & 0x01) << (32 - BitPos);
-
     /*
 #define BIT_SET(a,b) ((a) |= (1<<(b)))
 #define BIT_CLEAR(a,b) ((a) &= ~(1<<(b)))
@@ -82,12 +75,11 @@ bit = (number >> x) & 1;
     if (State)
     {
         // Set Bit
-        *Target_p |= 1<<(32 - BitPos - 1);
+        *Target_p |= 1<<BitPos;
     }
     else
     {
-        // Clear Bit
-        *Target_p &= ~(1<<(32 - BitPos - 1));
+        *Target_p &= ~(1<<BitPos);
     }
 }
 
@@ -106,12 +98,11 @@ BITS_SetCellStateInCurrent(BitsGame_t* Game_p,
     if (State)
     {
         // Set Bit
-        *Target_p |= 1<<(32 - BitPos - 1);
+        *Target_p |= 1<<BitPos;
     }
     else
     {
-        // Clear Bit
-        *Target_p &= ~(1<<(32 - BitPos - 1));
+        *Target_p &= ~(1<<BitPos);
     }
 }
 
@@ -126,32 +117,43 @@ BITS_GetCellState(BitsGame_t* Game_p,
     int BitPos  = (1 + Column) % (sizeof(uint_t) * 8);
 
     Target_p = Game_p->CurrentWorld_p + Game_p->NumberOfUintsPerRow * (1 + Row) + UintPos;
-//    printf("Col=%d Row=%d => 0x%04x\n", Column, Row, *Target_p);
-//    Target_p = Game_p->CurrentWorld_p + Game_p->NumberOfUintsPerRow * (1 + Column) + RowOffset;
-//    printf("Col=%d Row=%d => 0x%08x ... BitPos=%d Checker=0x%08x Result=%d\n",
-//            Column, Row, *Target_p,
-//            BitPos,
-//            1<<(32 - BitPos - 1),
-//            (*Target_p & (1<<(32 - BitPos - 1))));
 
 //#define BIT_CHECK(a,b) ((a) & (1<<(b)))
 
-    return (*Target_p & (1<<(32 - BitPos - 1))) > 0;
-//    return (*Target_p)>>(32 - BitPos);
+    if (*Target_p & (1<<BitPos))
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
 }
 
 
 void
 BITS_EvolveWorld(BitsGame_t* Game_p)
 {
-    for (int Column = 0; Column < Game_p->Width; Column++)
+#ifdef ENABLE_VERBOSE_LOGGING
+    printf("\n-------------------- NEIGHBORS...\n");
+#endif
+    for (int Row = 0; Row < Game_p->Height; Row++)
     {
-        for (int Row = 0; Row < Game_p->Height; Row++)
+#ifdef ENABLE_VERBOSE_LOGGING
+        printf("|");
+#endif
+        for (int Column = 0; Column < Game_p->Width; Column++)
         {
             int NewCellState = CalculateNewCellState(Game_p, Column, Row);
             BITS_SetCellState(Game_p, Column, Row, NewCellState);
         }
+#ifdef ENABLE_VERBOSE_LOGGING
+        printf("\n");
+#endif
     }
+#ifdef ENABLE_VERBOSE_LOGGING
+    printf("\n--------------------\n");
+#endif
 
     uint_t* TempWorld_p = Game_p->CurrentWorld_p;
     Game_p->CurrentWorld_p = Game_p->EvolvingWorld_p;
@@ -178,37 +180,41 @@ CalculateNewCellState(BitsGame_t* Game_p,
                       const int   Column,
                       const int   Row)
 {
+    const int UintInBits = sizeof(uint_t) * 8;
+
     int CurrentState = BITS_GetCellState(Game_p, Column, Row);
     int NewState = 0;
     int Neighbors = 0;
 
-    int UintPos = (1 + Column) / (sizeof(uint_t) * 8);
-    int BitPos  = (1 + Column) % (sizeof(uint_t) * 8);
+    int UintPos = (1 + Column) / UintInBits;
+    int BitPos  = (1 + Column) % UintInBits;
     uint_t* CurrentUint_p = Game_p->CurrentWorld_p + Game_p->NumberOfUintsPerRow * (1 + Row) + UintPos;
+    uint_t* PrevRowUint_p = CurrentUint_p - Game_p->NumberOfUintsPerRow;
+    uint_t* NextRowUint_p = CurrentUint_p + Game_p->NumberOfUintsPerRow;
 
-    if ((BitPos == 1) && (UintPos > 0))
+    if ((BitPos == 0) && (UintPos > 0))
     {
-        // First bit in uint_t (bit 32)
-//        uint_t FirstBit = *(CurrentUint_p - 1) >> 28 & 0x04;
-//        uint_t TheRest = (*CurrentUint_p>>30 &0x03) | FirstBit;
-
-        uint_t UpperUint   = (((*(CurrentUint_p - 1 - Game_p->NumberOfUintsPerRow)>>28)&0x04) | (*(CurrentUint_p - Game_p->NumberOfUintsPerRow)>>30 & 0x03));
-        uint_t CurrentUint = (((*(CurrentUint_p - 1)>>28)&0x04) | (*CurrentUint_p>>30 & 0x03));
-        uint_t LowerUint   = (((*(CurrentUint_p - 1 + Game_p->NumberOfUintsPerRow)>>28)&0x04) | (*(CurrentUint_p + Game_p->NumberOfUintsPerRow)>>30 & 0x03));
+        // First bit in uint_t (bit 0)
+        // We take:
+        //   * The two lower bits from CurrentUint_p
+        //   * The one highest bit from CurrentUint_p - 1
+        uint_t UpperUint   = ((*(PrevRowUint_p - 1)>>31)&0x01) | ((*PrevRowUint_p & 0x03)<<1);
+        uint_t CurrentUint = ((*(CurrentUint_p - 1)>>31)&0x01) | ((*CurrentUint_p & 0x03)<<1);
+        uint_t LowerUint   = ((*(NextRowUint_p - 1)>>31)&0x01) | ((*NextRowUint_p & 0x03)<<1);
 
         Neighbors += CALC_BITS_PER_3(UpperUint & 0x07);
         Neighbors += CALC_BITS_PER_3(CurrentUint & 0x05);
         Neighbors += CALC_BITS_PER_3(LowerUint & 0x07);
     }
-    else if (BitPos == 0 && (UintPos != Game_p->NumberOfUintsPerRow))
+    else if (BitPos == 31 && (UintPos != Game_p->NumberOfUintsPerRow))
     {
-        // Last bit in uint_t (bit 1)
-//        uint_t NextBit = (*(CurrentUint_p + 1)>>31)&0x01;
-//        uint_t TheRest = ((*CurrentUint_p)<<1)&0x06 | NextBit;
-
-        uint_t UpperUint   = (((*(CurrentUint_p + 1 - Game_p->NumberOfUintsPerRow)>>31)&0x01) | (*(CurrentUint_p - Game_p->NumberOfUintsPerRow)<<1 & 0x06));
-        uint_t CurrentUint = (((*(CurrentUint_p + 1)>>31)&0x01) | (*CurrentUint_p<<1 & 0x06));
-        uint_t LowerUint   = (((*(CurrentUint_p + 1 + Game_p->NumberOfUintsPerRow)>>31)&0x01) | (*(CurrentUint_p + Game_p->NumberOfUintsPerRow)<<1 & 0x06));
+        // Last bit in uint_t (bit 31)
+        // We take:
+        //   * The two upper bits from CurrentUint_p (bit 30, 31)
+        //   * The one lowest bit from CurrentUint_p + 1 (bit 0)
+        uint_t UpperUint   = ((*(PrevRowUint_p + 1)&0x01)<<2) | ((*PrevRowUint_p>>30) & 0x03);
+        uint_t CurrentUint = ((*(CurrentUint_p + 1)&0x01)<<2) | ((*CurrentUint_p>>30) & 0x03);
+        uint_t LowerUint   = ((*(NextRowUint_p + 1)&0x01)<<2) | ((*NextRowUint_p>>30) & 0x03);
 
         Neighbors += CALC_BITS_PER_3(UpperUint & 0x07);
         Neighbors += CALC_BITS_PER_3(CurrentUint & 0x05);
@@ -217,10 +223,10 @@ CalculateNewCellState(BitsGame_t* Game_p,
     else
     {
         // Somewhere in the middle...
-        int Shift = sizeof(uint_t) * 8 - 1 - BitPos - 1;
-        Neighbors += CALC_BITS_PER_3((*(CurrentUint_p - Game_p->NumberOfUintsPerRow) >> Shift) & 0x07);
+        int Shift = BitPos - 1;
+        Neighbors += CALC_BITS_PER_3((*(PrevRowUint_p) >> Shift) & 0x07);
         Neighbors += CALC_BITS_PER_3((*(CurrentUint_p) >> Shift) & 0x05);
-        Neighbors += CALC_BITS_PER_3((*(CurrentUint_p + Game_p->NumberOfUintsPerRow) >> Shift) & 0x07);
+        Neighbors += CALC_BITS_PER_3((*(NextRowUint_p) >> Shift) & 0x07);
     }
 
     if (CurrentState)
@@ -233,5 +239,8 @@ CalculateNewCellState(BitsGame_t* Game_p,
         // Cell is DEAD
         NewState = (Neighbors == 3);
     }
+#ifdef ENABLE_VERBOSE_LOGGING
+    printf("%d|", Neighbors);
+#endif
     return NewState;
 }

@@ -139,6 +139,9 @@ main(int argc, char* argv[])
         StartTime = clock();
         for (int i = 0; i < NumGenerations; i++)
         {
+//            printf("\n-------------------- EVOLVING...\n");
+//            GOL_OutputWorld(TheGame);
+
             GOL_EvolveWorld(TheGame);
             if (DoCompare)
             {
